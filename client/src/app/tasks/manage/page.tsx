@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import styles from './manage.module.css';
 import api from '@/lib/api';
-import { Plus, X, Calendar, UserPlus, Flag, Loader2, Edit2, Trash2 } from 'lucide-react';
+import { Plus, X, Calendar, UserPlus, Flag, Loader2, Edit2, Trash2, Paperclip } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Task {
@@ -46,6 +46,7 @@ function ManageTasksContent() {
         assignedTo: '',
         dueDate: ''
     });
+    const [attachments, setAttachments] = useState<FileList | null>(null);
 
     const searchParams = useSearchParams();
     const shouldCreate = searchParams.get('create');
@@ -111,22 +112,47 @@ function ManageTasksContent() {
         }
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setAttachments(e.target.files);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+
+        const data = new FormData();
+        data.append('title', formData.title);
+        data.append('description', formData.description);
+        data.append('priority', formData.priority);
+        data.append('assignedTo', formData.assignedTo);
+        data.append('dueDate', formData.dueDate);
+
+        if (attachments) {
+            for (let i = 0; i < attachments.length; i++) {
+                data.append('attachments', attachments[i]);
+            }
+        }
+
         try {
             if (editingTask) {
-                const res = await api.patch(`/tasks/${editingTask._id}`, formData);
+                const res = await api.patch(`/tasks/${editingTask._id}`, data, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
                 setTasks(tasks.map((t: any) => t._id === editingTask._id ? res.data.data : t));
                 toast.success('Task updated successfully!');
             } else {
-                const res = await api.post('/tasks', formData);
+                const res = await api.post('/tasks', data, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
                 setTasks([res.data.data, ...tasks]);
                 toast.success('Task created successfully!');
             }
             setShowModal(false);
             setEditingTask(null);
             setFormData({ title: '', description: '', priority: 'Medium', assignedTo: '', dueDate: '' });
+            setAttachments(null);
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to process task');
         } finally {
@@ -243,14 +269,29 @@ function ManageTasksContent() {
                                     </select>
                                 </div>
                             </div>
-                            <div className={styles.field}>
-                                <label>Due Date</label>
                                 <input 
                                     type="date" 
                                     value={formData.dueDate}
                                     onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
                                     required 
                                 />
+                            </div>
+                            <div className={styles.field}>
+                                <label>Attachments (Max 5 files)</label>
+                                <div className={styles.fileInputWrapper}>
+                                    <input 
+                                        type="file" 
+                                        multiple 
+                                        onChange={handleFileChange}
+                                        id="file-upload"
+                                        className={styles.fileInput}
+                                        accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                                    />
+                                    <label htmlFor="file-upload" className={styles.fileLabel}>
+                                        <Paperclip size={18} />
+                                        <span>{attachments ? `${attachments.length} files selected` : 'Choose files'}</span>
+                                    </label>
+                                </div>
                             </div>
                             <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
                                 {isSubmitting ? <Loader2 className="animate-spin" /> : editingTask ? 'Update Task' : 'Create Task'}

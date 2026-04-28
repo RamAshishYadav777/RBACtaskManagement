@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
+const path = require('path');
 const morgan = require('morgan');
 
 const dbConnect = require('./app/config/db');
@@ -16,6 +17,7 @@ const errorHandler = require('./app/middleware/errorMiddleware');
 
 const validateApiKey = require('./app/middleware/apiKeyMiddleware');
 const setupSwagger = require('./app/config/swagger');
+const initScheduler = require('./app/utils/scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,6 +41,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // custom security middleware
 // app.use(validateApiKey);
@@ -63,6 +66,7 @@ dbConnect().then(() => {
 
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
+        initScheduler();
     });
 }).catch(err => {
     console.error('Failed to connect to database', err);
