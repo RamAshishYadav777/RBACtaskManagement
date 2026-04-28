@@ -2,19 +2,18 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useDispatch } from 'react-redux';
-import { setCredentials } from '@/redux/slices/authSlice';
 import styles from './login.module.css';
 import api from '@/lib/api';
 import { LogIn, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const dispatch = useDispatch();
+    const { login } = useAuth();
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +31,7 @@ export default function LoginPage() {
             
             if (response.data.success) {
                 const { user, accessToken } = response.data.data;
-                dispatch(setCredentials({ user, accessToken }));
+                login(user, accessToken);
                 
                 // Using window.location.href as a more reliable redirect in some environments
                 window.location.href = '/dashboard';

@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import styles from './manage.module.css';
 import api from '@/lib/api';
-import { Plus, X, Calendar, UserPlus, Flag, Loader2, Edit2, Trash2, Paperclip } from 'lucide-react';
+import { Plus, X, UserPlus, Loader2, Edit2, Trash2, Paperclip, FileText, Download, Calendar, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Task {
@@ -16,10 +16,11 @@ interface Task {
     status: string;
     priority: string;
     dueDate: string;
-    assignedTo?: {
-        _id: string;
-        name: string;
-    };
+    dueDateFormatted?: string;
+    attachments?: { filename: string; path: string; mimetype: string }[];
+    assignedTo?: { _id: string; name: string; role: string; };
+    assignedBy?: { _id: string; name: string; role: string; };
+    assignmentChain?: { userId: string; name: string; role: string; assignedAt: string }[];
 }
 
 interface User {
@@ -59,6 +60,9 @@ function ManageTasksContent() {
 
     useEffect(() => {
         setMounted(true);
+        // wait until user is loaded from localStorage before filtering assignees
+        if (!user?.role) return;
+
         const fetchData = async () => {
             try {
                 const [tasksRes, usersRes] = await Promise.all([
@@ -66,18 +70,15 @@ function ManageTasksContent() {
                     api.get('/users')
                 ]);
                 setTasks(tasksRes.data.data);
-                
-                // RBAC Assignee Filtering
+
+                // filter assignees based on the logged-in user's role
                 const allUsers = usersRes.data.data;
-                if (user?.role === 'Admin') {
-                    // Admins assign to Managers
+                if (user.role === 'Admin') {
                     setAvailableAssignees(allUsers.filter((u: any) => u.role === 'Manager'));
-                } else if (user?.role === 'Manager') {
-                    // Managers assign to Employees
+                } else if (user.role === 'Manager') {
                     setAvailableAssignees(allUsers.filter((u: any) => u.role === 'Employee'));
-                } else if (user?.role === 'Super Admin') {
-                    // Super Admin can assign to anyone except themselves (optional)
-                    setAvailableAssignees(allUsers.filter((u: any) => u._id !== user.id));
+                } else if (user.role === 'Super Admin') {
+                    setAvailableAssignees(allUsers.filter((u: any) => u._id !== user._id));
                 }
 
             } catch (err) {
@@ -87,7 +88,7 @@ function ManageTasksContent() {
             }
         };
         fetchData();
-    }, []);
+    }, [user?.role]);
 
     const handleEdit = (task: Task) => {
         setEditingTask(task);
@@ -101,16 +102,55 @@ function ManageTasksContent() {
         setShowModal(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this task?')) return;
-        try {
-            await api.delete(`/tasks/${id}`);
-            setTasks(tasks.filter((t: any) => t._id !== id));
-            toast.success('Task deleted successfully');
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to delete task');
-        }
+    const confirmDelete = (id: string, title: string) => {
+        toast(
+            (t) => (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: '14px' }}>Delete Task?</p>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                        "<strong>{title}</strong>" will be permanently removed.
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                            onClick={async () => {
+                                toast.dismiss(t.id);
+                                try {
+                                    await api.delete(`/tasks/${id}`);
+                                    setTasks(prev => prev.filter((tk: any) => tk._id !== id));
+                                    toast.success('Task deleted successfully');
+                                } catch (err: any) {
+                                    toast.error(err.response?.data?.message || 'Failed to delete task');
+                                }
+                            }}
+                            style={{
+                                background: '#ef4444', color: 'white', border: 'none',
+                                padding: '6px 14px', borderRadius: '6px', cursor: 'pointer',
+                                fontWeight: 600, fontSize: '13px'
+                            }}
+                        >
+                            Delete
+                        </button>
+                        <button
+                            onClick={() => toast.dismiss(t.id)}
+                            style={{
+                                background: '#f1f5f9', color: '#334155', border: 'none',
+                                padding: '6px 14px', borderRadius: '6px', cursor: 'pointer',
+                                fontWeight: 600, fontSize: '13px'
+                            }}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            ),
+            { duration: 10000 }
+        );
     };
+
+    const handleDelete = async (id: string) => {
+        // handled inside confirmDelete
+    };
+
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -167,12 +207,20 @@ function ManageTasksContent() {
             <div className={styles.header}>
                 <div>
                     <h1 className={styles.title}>Task Management</h1>
-                    <p className={styles.subtitle}>Create and assign tasks to your team</p>
+                    <p className={styles.subtitle}>
+                        {user?.role === 'Super Admin'
+                            ? 'Overview of all tasks and assignment flows'
+                            : user?.role === 'Admin'
+                            ? 'Create and assign tasks to your team'
+                            : 'View and reassign tasks assigned to you'}
+                    </p>
                 </div>
-                <button className={styles.createBtn} onClick={() => setShowModal(true)}>
-                    <Plus size={20} />
-                    <span>New Task</span>
-                </button>
+                {user?.role === 'Admin' && (
+                    <button className={styles.createBtn} onClick={() => setShowModal(true)}>
+                        <Plus size={20} />
+                        <span>New Task</span>
+                    </button>
+                )}
             </div>
 
             <div className={styles.grid}>
@@ -193,16 +241,84 @@ function ManageTasksContent() {
                             </div>
                             <h3 className={styles.taskTitle}>{task.title}</h3>
                             <p className={styles.taskDesc}>{task.description}</p>
+
+                            <div className={styles.taskMeta}>
+                                <div className={styles.metaRow}>
+                                    <User size={13} />
+                                    <span className={styles.metaLabel}>Assigned to:</span>
+                                    <span className={styles.metaValue}>
+                                        {task.assignedTo?.name || 'Unassigned'}
+                                        {task.assignedTo?.role && (
+                                            <span className={styles.roleBadge}>{task.assignedTo.role}</span>
+                                        )}
+                                    </span>
+                                </div>
+                                <div className={styles.metaRow}>
+                                    <Calendar size={13} />
+                                    <span className={styles.metaLabel}>Due:</span>
+                                    <span className={`${styles.metaValue} ${new Date(task.dueDate) < new Date() && task.status !== 'Completed' ? styles.overdue : ''}`}>
+                                        {task.dueDateFormatted || new Date(task.dueDate).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {task.attachments && task.attachments.length > 0 && (
+                                <div className={styles.attachments}>
+                                    <div className={styles.attachmentLabel}>
+                                        <Paperclip size={13} />
+                                        <span>{task.attachments.length} attachment{task.attachments.length > 1 ? 's' : ''}</span>
+                                    </div>
+                                    <div className={styles.attachmentList}>
+                                        {task.attachments.map((file: any, idx: number) => (
+                                            <a
+                                                key={idx}
+                                                href={`http://localhost:5000/${file.path.replace(/\\/g, '/')}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={styles.attachmentItem}
+                                                title={file.filename}
+                                            >
+                                                <FileText size={13} />
+                                                <span>{file.filename.length > 20 ? file.filename.slice(0, 20) + '...' : file.filename}</span>
+                                                <Download size={12} />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Super Admin: Full assignment chain */}
+                            {user?.role === 'Super Admin' && task.assignmentChain && task.assignmentChain.length > 0 && (
+                                <div className={styles.chainContainer}>
+                                    <span className={styles.chainTitle}>Assignment Flow</span>
+                                    <div className={styles.chain}>
+                                        {task.assignmentChain.map((step: any, idx: number) => (
+                                            <React.Fragment key={idx}>
+                                                <div className={styles.chainStep}>
+                                                    <span className={`${styles.chainRole} ${styles['chain_' + step.role.toLowerCase().replace(' ', '_')]}`}>
+                                                        {step.role}
+                                                    </span>
+                                                    <span className={styles.chainName}>{step.name}</span>
+                                                </div>
+                                                {idx < task.assignmentChain!.length - 1 && (
+                                                    <span className={styles.chainArrow}>→</span>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className={styles.taskFooter}>
                                 <div className={styles.meta}>
                                     <UserPlus size={14} />
-                                    <span>{task.assignedTo?.name || 'Unassigned'}</span>
+                                    <span>{task.assignedTo?.name || 'Unassigned'} <em style={{fontSize:'11px',color:'#94a3b8'}}>({task.assignedTo?.role})</em></span>
                                 </div>
                                 <div className={styles.actions}>
                                     <button className={styles.actionBtn} onClick={() => handleEdit(task)} title="Edit Task">
                                         <Edit2 size={16} />
                                     </button>
-                                    <button className={`${styles.actionBtn} ${styles.delete}`} onClick={() => handleDelete(task._id)} title="Delete Task">
+                                    <button className={`${styles.actionBtn} ${styles.delete}`} onClick={() => confirmDelete(task._id, task.title)} title="Delete Task">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -269,6 +385,8 @@ function ManageTasksContent() {
                                     </select>
                                 </div>
                             </div>
+                            <div className={styles.field}>
+                                <label>Due Date</label>
                                 <input 
                                     type="date" 
                                     value={formData.dueDate}

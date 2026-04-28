@@ -1,12 +1,9 @@
 'use client';
 
 import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@/redux/store';
-import { logout } from '@/redux/slices/authSlice';
+import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useUiStore } from '@/store/useUiStore';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { 
@@ -22,6 +19,7 @@ import {
 } from 'lucide-react';
 import styles from './DashboardLayout.module.css';
 
+
 const SidebarItem = ({ href, icon: Icon, label, active }: { href: string, icon: any, label: string, active: boolean }) => (
     <Link href={href} className={`${styles.sidebarItem} ${active ? styles.active : ''}`}>
         <Icon size={20} />
@@ -30,12 +28,12 @@ const SidebarItem = ({ href, icon: Icon, label, active }: { href: string, icon: 
 );
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { user } = useSelector((state: RootState) => state.auth);
-    const dispatch = useDispatch();
+    const { user, logout } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const { isSidebarOpen, toggleSidebar, closeSidebar } = useUiStore();
-    const [mounted, setMounted] = React.useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+    const toggleSidebar = () => setIsSidebarOpen(p => !p);
+    const closeSidebar = () => setIsSidebarOpen(false);
     const [notifications, setNotifications] = React.useState<any[]>([]);
     const [showNotifications, setShowNotifications] = React.useState(false);
 
@@ -49,10 +47,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
 
     React.useEffect(() => {
-        setMounted(true);
         if (user) {
             fetchNotifications();
-            // poll for notifications every 30 seconds
             const interval = setInterval(fetchNotifications, 30000);
             return () => clearInterval(interval);
         }
@@ -71,13 +67,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     const handleLogout = async () => {
         try {
-            await api.post('/auth/logout');
-            dispatch(logout());
+            await logout();
             toast.success('Logged out successfully');
             router.push('/login');
         } catch (error) {
             console.error('Logout failed', error);
-            dispatch(logout());
             router.push('/login');
         }
     };
@@ -107,7 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
 
                 <nav className={styles.sidebarNav}>
-                    {mounted && filteredItems.map((item) => (
+                    {filteredItems.map((item) => (
                         <SidebarItem 
                             key={item.href} 
                             href={item.href} 
@@ -137,7 +131,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <div className={styles.notificationWrapper}>
                             <button className={styles.iconBtn} onClick={() => setShowNotifications(!showNotifications)}>
                                 <Bell size={20} />
-                                {mounted && unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
+                                {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
                             </button>
 
                             {showNotifications && (
@@ -172,8 +166,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         </div>
                         <div className={styles.profile}>
                             <div className={styles.profileInfo}>
-                                <span className={styles.profileName}>{mounted ? user?.name : ''}</span>
-                                <span className={styles.profileRole}>{mounted ? user?.role : ''}</span>
+                                <span className={styles.profileName}>{user?.name}</span>
+                                <span className={styles.profileRole}>{user?.role}</span>
                             </div>
                             <div className={styles.avatar}>
                                 <UserIcon size={20} />

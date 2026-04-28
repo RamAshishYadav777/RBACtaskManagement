@@ -15,19 +15,18 @@ class UserController {
     }
 
     getAllUsers = async (req, res) => {
-        console.log(`[Controller] getAllUsers called by ${req.user.role}`);
         try {
             let query = {};
-            
+
             // RBAC Filtering for User List
             if (req.user.role === 'Admin') {
                 // Admins see Managers and Employees
                 query = { role: { $in: ['Manager', 'Employee'] } };
             } else if (req.user.role === 'Manager') {
-                // Managers see Employees (to assign tasks)
+                // Managers see Employees 
                 query = { role: 'Employee' };
             }
-            // Super Admin sees everyone (default query {})
+            // Super Admin sees everyone 
 
             const users = await User.find(query).select('-password -refreshToken -__v').sort({ createdAt: -1 });
 
@@ -51,7 +50,7 @@ class UserController {
         try {
             const { id } = req.params;
             const { role } = req.body;
-            
+
             if (req.user.role === 'Admin' && ['Super Admin', 'Admin'].includes(role)) {
                 return res.status(403).json({ success: false, message: 'Admins cannot assign Admin or Super Admin roles' });
             }
@@ -78,7 +77,7 @@ class UserController {
         try {
             const { id } = req.params;
             const { isActive } = req.body;
-            
+
             const targetUser = await User.findById(id);
             if (!targetUser) {
                 throw new Error('User not found');
@@ -129,7 +128,7 @@ class UserController {
         try {
             const { name } = req.body;
             const user = await User.findByIdAndUpdate(req.user.id, { name }, { new: true, runValidators: true });
-            
+
             return res.status(200).json({
                 success: true,
                 message: 'Profile updated successfully',

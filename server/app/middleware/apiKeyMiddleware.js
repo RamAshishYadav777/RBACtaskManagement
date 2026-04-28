@@ -1,5 +1,5 @@
 const validateApiKey = (req, res, next) => {
-    // skip validation for preflight requests
+
     if (req.method === 'OPTIONS') {
         return next();
     }

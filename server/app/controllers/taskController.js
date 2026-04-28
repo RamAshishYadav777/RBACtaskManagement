@@ -3,6 +3,22 @@ const User = require('../models/User');
 const moment = require('moment');
 const mongoose = require('mongoose');
 const Notification = require('../controllers/notificationController');
+const fs = require('fs');
+const path = require('path');
+
+// Helper: delete physical files from disk
+const deleteFiles = (attachments = []) => {
+    for (const file of attachments) {
+        try {
+            const filePath = path.resolve(file.path);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        } catch (err) {
+            console.error(`[FileCleanup] Failed to delete ${file.path}:`, err.message);
+        }
+    }
+};
 
 class TaskController {
     formatTask = (task) => {
@@ -14,6 +30,20 @@ class TaskController {
         }
         delete obj.__v;
         return obj;
+    }
+
+    // re-fetch a single task with fully populated assignedBy and assignedTo
+    // used after create/update so the frontend always gets name + role, not raw ObjectIds
+    getPopulatedTask = async (taskId) => {
+        const results = await Task.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(taskId) } },
+            { $lookup: { from: 'users', localField: 'assignedBy', foreignField: '_id', as: 'assignedBy' } },
+            { $lookup: { from: 'users', localField: 'assignedTo', foreignField: '_id', as: 'assignedTo' } },
+            { $unwind: '$assignedBy' },
+            { $unwind: '$assignedTo' },
+            { $project: { 'assignedBy.password': 0, 'assignedBy.refreshToken': 0, 'assignedTo.password': 0, 'assignedTo.refreshToken': 0, __v: 0 } }
+        ]);
+        return results.length ? this.formatTask(results[0]) : null;
     }
 
     createTask = async (req, res) => {
@@ -47,7 +77,11 @@ class TaskController {
                 priority,
                 assignedBy: req.user._id,
                 assignedTo,
-                dueDate
+                dueDate,
+                assignmentChain: [
+                    { userId: req.user._id, name: req.user.name, role: req.user.role, assignedAt: new Date() },
+                    { userId: assignee._id, name: assignee.name, role: assignee.role, assignedAt: new Date() }
+                ]
             };
 
             if (req.files) {
@@ -70,10 +104,12 @@ class TaskController {
                 relatedId: task._id
             });
 
+            // return fully populated task so frontend can render name + role immediately
+            const populated = await this.getPopulatedTask(task._id);
             return res.status(201).json({
                 success: true,
                 message: 'Task created successfully',
-                data: this.formatTask(task._doc)
+                data: populated
             });
         } catch (err) {
             return res.status(500).json({
@@ -221,6 +257,9 @@ class TaskController {
                 throw new Error('Task not found');
             }
 
+            // capture before any modifications — needed for completion notification
+            const oldStatus = task.status;
+
             if (req.user.role === 'Employee') {
                 if (task.assignedTo.toString() !== req.user._id.toString()) {
                     return res.status(403).json({ success: false, message: 'Not authorized' });
@@ -244,7 +283,28 @@ class TaskController {
                     }
                 }
 
-                Object.assign(task, req.body);
+                // If Manager is reassigning a task originally assigned TO them (e.g. from Admin),
+                // take ownership as the assigner so the task stays visible in their dashboard.
+                // After: assignedBy = Manager, assignedTo = Employee
+                if (isAssignee && req.body.assignedTo && req.body.assignedTo.toString() !== req.user._id.toString()) {
+                    task.assignedBy = req.user._id;
+
+                    // Extend the assignment chain with the new employee
+                    const newAssignee = await User.findById(req.body.assignedTo);
+                    if (newAssignee) {
+                        if (!task.assignmentChain) task.assignmentChain = [];
+                        task.assignmentChain.push({
+                            userId: newAssignee._id,
+                            name: newAssignee.name,
+                            role: newAssignee.role,
+                            assignedAt: new Date()
+                        });
+                    }
+                }
+
+                // prevent client from overwriting server-controlled fields
+                const { assignedBy: _ab, assignmentChain: _ac, ...safeBody } = req.body;
+                Object.assign(task, safeBody);
             } else if (req.user.role === 'Admin') {
                 // Admin Assignment Rule: Can only assign to Managers
                 if (req.body.assignedTo) {
@@ -268,7 +328,6 @@ class TaskController {
                 task.attachments = [...task.attachments, ...newAttachments];
             }
 
-            const oldStatus = task.status;
             await task.save();
 
             // Notify if task completed
@@ -299,10 +358,11 @@ class TaskController {
                 }
             }
 
+            const populated = await this.getPopulatedTask(task._id);
             return res.status(200).json({
                 success: true,
                 message: 'Task updated successfully',
-                data: this.formatTask(task._doc)
+                data: populated
             });
         } catch (err) {
             const status = err.message === 'Task not found' ? 404 : 500;
@@ -328,6 +388,11 @@ class TaskController {
 
             if (req.user.role === 'Manager' && task.assignedBy.toString() !== req.user._id.toString()) {
                 return res.status(403).json({ success: false, message: 'Managers can only delete tasks they created' });
+            }
+
+            // Delete physical attachment files from disk before removing the task
+            if (task.attachments && task.attachments.length > 0) {
+                deleteFiles(task.attachments);
             }
 
             await task.deleteOne();

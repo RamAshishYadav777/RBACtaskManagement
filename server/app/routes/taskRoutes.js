@@ -8,32 +8,23 @@ const { createTaskSchema, updateTaskSchema } = require('../validations/taskValid
 
 const router = express.Router();
 
-// file storage config
+// save files to disk with timestamp prefix
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    }
+    destination: (req, file, cb) => cb(null, 'uploads/'),
+    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
 });
 
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
     fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|pdf|doc|docx/;
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = filetypes.test(file.mimetype);
-
-        if (extname && mimetype) {
-            return cb(null, true);
-        } else {
-            cb(new Error('Only images, PDFs, and Word docs are allowed'));
-        }
+        const allowed = /jpeg|jpg|png|pdf|doc|docx/;
+        const ok = allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype);
+        ok ? cb(null, true) : cb(new Error('Only images, PDFs, and Word docs are allowed'));
     }
 });
 
+// all routes need a valid JWT
 router.use(protect);
 
 router.post('/', authorize('Admin', 'Manager'), upload.array('attachments', 5), validate(createTaskSchema), createTask);
