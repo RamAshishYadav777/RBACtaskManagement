@@ -1,0 +1,114 @@
+.header {
+    margin-bottom: 32px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.subtitle {
+    color: #64748b;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 24px;
+}
+
+.card {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    align-items: center;
+}
+
+.priority {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.high { background: #fef2f2; color: #ef4444; }
+.medium { background: #fff7ed; color: #f59e0b; }
+.low { background: #f0f9ff; color: #06b6d4; }
+
+.dueDate {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.taskTitle {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.taskDesc {
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    flex: 1;
+}
+
+.statusSection {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+}
+
+.statusSection label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: #64748b;
+}
+
+.statusBtns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.statusBtn {
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.statusBtn:hover {
+    background: #f1f5f9;
+}
+
+.active {
+    background: var(--primary) !important;
+    color: white !important;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+}
+
+.loading, .empty {
+    text-align: center;
+    padding: 60px;
+}

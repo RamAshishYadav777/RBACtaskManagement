@@ -1,0 +1,239 @@
+.container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logoIcon {
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 20px;
+}
+
+.logo span {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.navLinks {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.loginBtn {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.registerBtn {
+    background: var(--primary);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 100px 0;
+    gap: 60px;
+}
+
+.heroContent {
+    animation: fadeIn 0.8s ease;
+}
+
+
+.heroContent h1 {
+    font-size: 56px;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    font-weight: 800;
+}
+
+.heroContent h1 span {
+    color: var(--primary);
+    background: linear-gradient(90deg, var(--primary), #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.heroContent p {
+    font-size: 18px;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 40px;
+    max-width: 500px;
+}
+
+.heroBtns {
+    display: flex;
+    gap: 16px;
+}
+
+.primaryBtn {
+    background: var(--primary);
+    color: white;
+    padding: 16px 28px;
+    border-radius: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+}
+
+
+.heroImage {
+    perspective: 1000px;
+}
+
+.mockup {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    transform: rotateY(-15deg) rotateX(5deg);
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: rotateY(-15deg) rotateX(5deg) translateY(0); }
+    50% { transform: rotateY(-15deg) rotateX(5deg) translateY(-20px); }
+}
+
+.mockupHeader {
+    height: 48px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+}
+
+.dots {
+    display: flex;
+    gap: 6px;
+}
+
+.dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e2e8f0;
+}
+
+.mockupBody {
+    padding: 32px;
+}
+
+.skeletonLine {
+    height: 12px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    margin-bottom: 24px;
+}
+
+.skeletonGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.skeletonCard {
+    height: 80px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+}
+
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 32px;
+    padding: 80px 0;
+}
+
+.featureCard {
+    padding: 32px;
+    background: white;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+}
+
+.featureCard:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-8px);
+    border-color: var(--primary);
+}
+
+.featureIcon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.featureCard h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.featureCard p {
+    color: #64748b;
+    line-height: 1.6;
+}
+
+.footer {
+    text-align: center;
+    padding: 60px 0;
+    border-top: 1px solid var(--border);
+    color: #64748b;
+    font-size: 14px;
+}
+
+@media (max-width: 1024px) {
+    .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        padding: 60px 0;
+    }
+    
+    .heroContent h1 { font-size: 44px; }
+    .heroContent p { margin: 0 auto 40px; }
+    .heroBtns { justify-content: center; }
+    .mockup { transform: none; animation: none; }
+    .heroImage { margin-top: 60px; }
+}
