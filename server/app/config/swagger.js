@@ -7,9 +7,9 @@ const options = {
         info: {
             title: 'RBAC Task Management API',
             version: '1.0.0',
-            description: 'A role-based task management system API created by Antigravity',
+            description: 'A task management API',
             contact: {
-                name: 'Antigravity AI'
+                name: 'Web Team'
             }
         },
         servers: [
