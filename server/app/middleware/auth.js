@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// verify JWT from cookie or Authorization header
+// verify user token
 const protect = async (req, res, next) => {
     let token;
 
@@ -34,7 +34,7 @@ const protect = async (req, res, next) => {
     }
 };
 
-// role-based access control — usage: authorize('Admin', 'Manager')
+// authorize user roles
 const authorize = (...roles) => {
     return (req, res, next) => {
         const userRole = req.user.role.toLowerCase();

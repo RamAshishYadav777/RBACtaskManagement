@@ -48,7 +48,30 @@ router.post('/register', validate(registerSchema), register);
  *         description: Login successful
  */
 router.post('/login', validate(loginSchema), login);
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     tags:
+ *       - Auth
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ */
 router.post('/refresh', refresh);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     tags:
+ *       - Auth
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ */
 router.post('/logout', logout);
 
 module.exports = router;

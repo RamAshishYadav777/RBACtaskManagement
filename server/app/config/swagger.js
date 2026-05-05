@@ -2,17 +2,38 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 const options = {
-    definition: {
+    swaggerDefinition: {
         openapi: '3.0.0',
         info: {
             title: 'RBAC Task Management API',
             version: '1.0.0',
-            description: 'A role-based task management system API',
+            description: 'A role-based task management system API created by Antigravity',
+            contact: {
+                name: 'Antigravity AI'
+            }
         },
         servers: [
             {
                 url: 'http://localhost:5000/api',
             },
+        ],
+        tags: [
+            {
+                name: 'Auth',
+                description: 'Authentication API'
+            },
+            {
+                name: 'Users',
+                description: 'User Management API'
+            },
+            {
+                name: 'Tasks',
+                description: 'Task Management API'
+            },
+            {
+                name: 'Notifications',
+                description: 'Notifications API'
+            }
         ],
         components: {
             securitySchemes: {
@@ -37,7 +58,7 @@ const options = {
             },
         ],
     },
-    apis: ['./app/routes/*.js', './app/controllers/*.js'], // files containing annotations
+    apis: ['./app/routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

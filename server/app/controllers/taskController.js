@@ -6,7 +6,7 @@ const Notification = require('../controllers/notificationController');
 const fs = require('fs');
 const path = require('path');
 
-// Helper: delete physical files from disk
+// delete physical files
 const deleteFiles = (attachments = []) => {
     for (const file of attachments) {
         try {
@@ -32,8 +32,8 @@ class TaskController {
         return obj;
     }
 
-    // re-fetch a single task with fully populated assignedBy and assignedTo
-    // used after create/update so the frontend always gets name + role, not raw ObjectIds
+// fetch populated task
+    // refresh task data
     getPopulatedTask = async (taskId) => {
         const results = await Task.aggregate([
             { $match: { _id: new mongoose.Types.ObjectId(taskId) } },
@@ -57,8 +57,8 @@ class TaskController {
 
             // RBAC Assignment Rules:
             // Super Admin: Any
-            // Admin: Assign to Manager
-            // Manager: Assign to Employee
+// admin assigns managers
+// manager assigns employees
             if (req.user.role === 'Admin' && assignee.role !== 'Manager') {
                 return res.status(403).json({ success: false, message: 'Admins can only assign tasks to Managers (assign through managers)' });
             }
@@ -94,7 +94,7 @@ class TaskController {
 
             const task = await Task.create(taskData);
 
-            // Notify Employee
+// notify the employee
             await Notification.create({
                 recipient: assignedTo,
                 sender: req.user._id,
@@ -104,7 +104,7 @@ class TaskController {
                 relatedId: task._id
             });
 
-            // return fully populated task so frontend can render name + role immediately
+// return populated task
             const populated = await this.getPopulatedTask(task._id);
             return res.status(201).json({
                 success: true,
@@ -124,11 +124,11 @@ class TaskController {
             let matchStage = {};
             
             if (req.user.role === 'Admin') {
-                // Admins see all tasks involving Managers and Employees, or tasks they created
-                // For simplicity, Admins can see all tasks they created or are in the system (since they manage managers/employees)
+// admins see all
+// show admin tasks
                 matchStage = {}; 
             } else if (req.user.role === 'Manager') {
-                // Managers see tasks they assigned OR tasks assigned to them
+// show manager tasks
                 matchStage = {
                     $or: [
                         { assignedBy: new mongoose.Types.ObjectId(req.user._id) },
@@ -257,7 +257,7 @@ class TaskController {
                 throw new Error('Task not found');
             }
 
-            // capture before any modifications — needed for completion notification
+// capture old status
             const oldStatus = task.status;
 
             if (req.user.role === 'Employee') {
@@ -267,7 +267,7 @@ class TaskController {
                 const { status } = req.body;
                 task.status = status;
             } else if (req.user.role === 'Manager') {
-                // Can update if they assigned it OR if it was assigned to them
+// manager update logic
                 const isAssigner = task.assignedBy.toString() === req.user._id.toString();
                 const isAssignee = task.assignedTo.toString() === req.user._id.toString();
                 
@@ -275,7 +275,7 @@ class TaskController {
                     return res.status(403).json({ success: false, message: 'Not authorized to update this task' });
                 }
 
-                // Manager Assignment Rule: Can only assign to Employees
+// manager assignment rule
                 if (req.body.assignedTo) {
                     const assignee = await User.findById(req.body.assignedTo);
                     if (assignee && assignee.role !== 'Employee') {
@@ -283,13 +283,13 @@ class TaskController {
                     }
                 }
 
-                // If Manager is reassigning a task originally assigned TO them (e.g. from Admin),
-                // take ownership as the assigner so the task stays visible in their dashboard.
-                // After: assignedBy = Manager, assignedTo = Employee
+// manager reassigns task
+                // take task ownership
+                // set new roles
                 if (isAssignee && req.body.assignedTo && req.body.assignedTo.toString() !== req.user._id.toString()) {
                     task.assignedBy = req.user._id;
 
-                    // Extend the assignment chain with the new employee
+// extend assignment chain
                     const newAssignee = await User.findById(req.body.assignedTo);
                     if (newAssignee) {
                         if (!task.assignmentChain) task.assignmentChain = [];
@@ -302,11 +302,11 @@ class TaskController {
                     }
                 }
 
-                // prevent client from overwriting server-controlled fields
+// prevent field overwrite
                 const { assignedBy: _ab, assignmentChain: _ac, ...safeBody } = req.body;
                 Object.assign(task, safeBody);
             } else if (req.user.role === 'Admin') {
-                // Admin Assignment Rule: Can only assign to Managers
+// admin assignment rule
                 if (req.body.assignedTo) {
                     const assignee = await User.findById(req.body.assignedTo);
                     if (assignee && assignee.role !== 'Manager') {
@@ -315,7 +315,7 @@ class TaskController {
                 }
                 Object.assign(task, req.body);
             } else {
-                // Super Admin or others
+// other user roles
                 return res.status(403).json({ success: false, message: 'Not authorized' });
             }
 
@@ -330,9 +330,9 @@ class TaskController {
 
             await task.save();
 
-            // Notify if task completed
+// notify completion now
             if (task.status === 'Completed' && oldStatus !== 'Completed') {
-                // 1. Notify the Assigner
+// notify the assigner
                 await Notification.create({
                     recipient: task.assignedBy,
                     sender: req.user._id,
@@ -342,7 +342,7 @@ class TaskController {
                     relatedId: task._id
                 });
 
-                // 2. Notify Super Admins
+// notify super admins
                 const superAdmins = await User.find({ role: 'Super Admin' });
                 for (const sa of superAdmins) {
                     if (sa._id.toString() !== task.assignedBy.toString()) { // avoid double notification
@@ -390,7 +390,7 @@ class TaskController {
                 return res.status(403).json({ success: false, message: 'Managers can only delete tasks they created' });
             }
 
-            // Delete physical attachment files from disk before removing the task
+// delete attachment files
             if (task.attachments && task.attachments.length > 0) {
                 deleteFiles(task.attachments);
             }

@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
         trim: true,
         match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
     },
-    // hidden by default, use .select('+password') to fetch
+// hidden by default
     password: {
         type: String,
         required: [true, 'Password is required'],
@@ -31,20 +31,20 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-    // stored to support logout / token invalidation
+// store refresh token
     refreshToken: {
         type: String,
         select: false
     }
 }, { timestamps: true });
 
-// hash password before saving
+// hash user password
 userSchema.pre('save', async function() {
     if (!this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password, 10);
 });
 
-// compare plain password with hash
+// compare user password
 userSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };

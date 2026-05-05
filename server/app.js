@@ -20,7 +20,7 @@ const initScheduler = require('./app/utils/scheduler');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// create uploads folder if missing
+// create uploads folder
 if (!fs.existsSync('./uploads')) {
     fs.mkdirSync('./uploads');
 }
@@ -29,10 +29,10 @@ if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
 
-// security headers
+// add security headers
 app.use(helmet());
 
-// allow frontend requests with cookies
+// allow frontend requests
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     credentials: true
@@ -47,7 +47,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 setupSwagger(app);
 
-// routes
+// define api routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
@@ -56,7 +56,7 @@ app.use('/api/notifications', notificationRoutes);
 // global error handler
 app.use(errorHandler);
 
-// start server after DB connects
+// start the server
 dbConnect().then(() => {
     app.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);

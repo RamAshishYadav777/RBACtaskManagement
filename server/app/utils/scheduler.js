@@ -4,7 +4,7 @@ const Notification = require('../controllers/notificationController');
 const moment = require('moment');
 
 const initScheduler = () => {
-    // runs daily at 9 AM — sends reminders for tasks due today
+    // run daily reminders
     cron.schedule('0 9 * * *', async () => {
         console.log('Running daily task reminder...');
         try {

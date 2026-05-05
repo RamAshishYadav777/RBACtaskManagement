@@ -34,13 +34,13 @@ const taskSchema = new mongoose.Schema({
         type: Date,
         required: [true, 'Due date is required']
     },
-    // file metadata — actual files stored in /uploads
+// stored file metadata
     attachments: [{
         filename: String,
         path: String,
         mimetype: String
     }],
-    // tracks delegation: Admin → Manager → Employee
+// tracks task delegation
     assignmentChain: [{
         userId:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         name:       { type: String },
