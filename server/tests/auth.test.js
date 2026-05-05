@@ -5,8 +5,6 @@ const User = require('../app/models/User');
 
 describe('Auth API', () => {
     beforeAll(async () => {
-        // Connect to a test database if possible, or just use the current one if it's a dev environment
-        // For this task, we assume the DB is already connected via app.js
     });
 
     afterAll(async () => {
