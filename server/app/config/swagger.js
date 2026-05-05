@@ -9,7 +9,7 @@ const options = {
             version: '1.0.0',
             description: 'A task management API',
             contact: {
-                name: 'Web Team'
+                name: 'dev Team'
             }
         },
         servers: [
